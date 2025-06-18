@@ -30,7 +30,7 @@ type ScanResult struct {
 }
 
 func main() {
-	http.HandleFunc("/scan", corsMiddleware(scanHandler))
+	http.HandleFunc("/scan", corsMiddleware(Handler))
 	fmt.Println("Server listening on port 8080...")
 	http.ListenAndServe(":8080", nil)
 }
@@ -57,7 +57,7 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func scanHandler(w http.ResponseWriter, r *http.Request) {
+func Handler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	targetURL := query.Get("url")
 
