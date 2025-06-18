@@ -1,3 +1,3 @@
-module vo-header-checker
+module api
 
 go 1.22
