@@ -29,12 +29,6 @@ type ScanResult struct {
 	DetailedReport string              `json:"detailed_report,omitempty"`
 }
 
-func main() {
-	http.HandleFunc("/scan", corsMiddleware(Handler))
-	fmt.Println("Server listening on port 8080...")
-	http.ListenAndServe(":8080", nil)
-}
-
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
