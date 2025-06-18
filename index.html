@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Header Scanner | Web Security Analysis Tool</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --warning: #f8961e;
+            --info: #4895ef;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --white: #ffffff;
+            
+            --present: #2ecc71;
+            --missing: #e74c3c;
+            --warning-color: #f39c12;
+            
+            --critical: #d90429;
+            --high: #ef233c;
+            --medium: #f8961e;
+            --low: #4cc9f0;
+            --info-color: #4361ee;
+            
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Roboto', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: #f5f7fa;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--white);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: var(--box-shadow);
+        }
+        
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .scanner-form {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .input-group {
+            display: flex;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        
+        #url-input {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 2px solid var(--light);
+            border-radius: var(--border-radius) 0 0 var(--border-radius);
+            transition: var(--transition);
+        }
+        
+        #url-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        #scan-button {
+            padding: 12px 24px;
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        #scan-button:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .loading {
+            text-align: center;
+            display: none;
+            padding: 2rem 0;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            display: none;
+            margin-top: 2rem;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .summary-card {
+            background-color: var(--white);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--box-shadow);
+            border-left: 5px solid var(--primary);
+        }
+        
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        
+        .score-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--white);
+            flex-shrink: 0;
+        }
+        
+        .grade {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-left: 8px;
+        }
+        
+        .score-details {
+            flex: 1;
+        }
+        
+        .progress-container {
+            margin-top: 1rem;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--danger), var(--warning), var(--success));
+            width: 0;
+            transition: width 1s ease;
+        }
+        
+        .missing-headers {
+            background-color: var(--white);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--box-shadow);
+        }
+        
+        .missing-header-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .missing-header-item:last-child {
+            border-bottom: none;
+        }
+        
+        .header-card {
+            background-color: var(--white);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+        }
+        
+        .header-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        
+        .header-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--dark);
+        }
+        
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-present {
+            background-color: rgba(46, 204, 113, 0.1);
+            color: var(--present);
+        }
+        
+        .status-missing {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--missing);
+        }
+        
+        .status-warning {
+            background-color: rgba(248, 150, 30, 0.1);
+            color: var(--warning-color);
+        }
+        
+        .severity {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .severity-critical {
+            background-color: rgba(217, 4, 41, 0.1);
+            color: var(--critical);
+        }
+        
+        .severity-high {
+            background-color: rgba(239, 35, 60, 0.1);
+            color: var(--high);
+        }
+        
+        .severity-medium {
+            background-color: rgba(248, 150, 30, 0.1);
+            color: var(--medium);
+        }
+        
+        .severity-low {
+            background-color: rgba(76, 201, 240, 0.1);
+            color: var(--low);
+        }
+        
+        .severity-info {
+            background-color: rgba(67, 97, 238, 0.1);
+            color: var(--info-color);
+        }
+        
+        .header-meta {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .description {
+            color: var(--gray);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+        
+        .current-value {
+            background-color: var(--light);
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        
+        .recommendation {
+            background-color: #f8f9fa;
+            padding: 0.75rem;
+            border-radius: 4px;
+            border-left: 3px solid var(--primary);
+            font-size: 0.95rem;
+        }
+        
+        .recommendation strong {
+            color: var(--primary);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin: 1.5rem 0;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 1.5rem;
+        }
+        
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--gray);
+            border-bottom: 3px solid transparent;
+            transition: var(--transition);
+        }
+        
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+        
+        .summary-table th, 
+        .summary-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .summary-table th {
+            background-color: var(--light);
+            font-weight: 600;
+        }
+        
+        .summary-table tr:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        .copy-button {
+            background-color: var(--light);
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            transition: var(--transition);
+        }
+        
+        .copy-button:hover {
+            background-color: #e9ecef;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+            color: var(--gray);
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 768px) {
+            .input-group {
+                flex-direction: column;
+            }
+            
+            #url-input {
+                border-radius: var(--border-radius);
+                margin-bottom: 0.5rem;
+            }
+            
+            #scan-button {
+                border-radius: var(--border-radius);
+                justify-content: center;
+            }
+            
+            .score-display {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .header-top {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .header-meta {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <h1><i class="fas fa-shield-alt"></i> Security Header Scanner</h1>
+            <p class="subtitle">Analyze your website's HTTP security headers to identify vulnerabilities and improve your security posture</p>
+            
+            <div class="scanner-form">
+                <div class="input-group">
+                    <input type="text" id="url-input" placeholder="Enter website URL (e.g., https://example.com)">
+                    <button id="scan-button">
+                        <i class="fas fa-search"></i> Scan Headers
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Scanning website headers...</p>
+        </div>
+        
+        <div class="results" id="results">
+            <div class="tab-container">
+                <div class="tab active" data-tab="summary">Summary</div>
+                <div class="tab" data-tab="detailed">Detailed Results</div>
+                <div class="tab" data-tab="missing">Missing Headers</div>
+                <div class="tab" data-tab="report">Full Report</div>
+            </div>
+            
+            <div class="tab-content active" id="summary-tab">
+                <div class="summary-card">
+                    <h2><i class="fas fa-chart-pie"></i> Security Header Summary</h2>
+                    <div class="score-display">
+                        <div class="score-circle" id="score-circle" style="background: conic-gradient(var(--success) 0% 85%, var(--light) 85% 100%);">
+                            <span id="score-value">85</span>
+                        </div>
+                        <div class="score-details">
+                            <h3 id="summary-text">Your website has good security headers configuration</h3>
+                            <p id="grade" class="grade">Grade: <span>A</span></p>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 85%;"></div>
+                                </div>
+                                <small>Security score calculated based on presence and configuration of security headers</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="missing-headers">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Critical Improvements Needed</h3>
+                    <div id="critical-improvements">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+                
+                <h3 class="section-title"><i class="fas fa-table"></i> Quick Overview</h3>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Header</th>
+                            <th>Status</th>
+                            <th>Severity</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-table-body">
+                        <!-- Filled by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="tab-content" id="detailed-tab">
+                <h2 class="section-title"><i class="fas fa-search"></i> Detailed Header Analysis</h2>
+                <div id="header-results">
+                    <!-- Filled by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="tab-content" id="missing-tab">
+                <h2 class="section-title"><i class="fas fa-times-circle"></i> Missing Security Headers</h2>
+                <div id="missing-headers-list">
+                    <!-- Filled by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="tab-content" id="report-tab">
+                <h2 class="section-title"><i class="fas fa-file-alt"></i> Full Security Report</h2>
+                <button class="copy-button" id="copy-report">
+                    <i class="far fa-copy"></i> Copy Report
+                </button>
+                <div class="current-value" id="full-report">
+                    <!-- Filled by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>Security Header Scanner &copy; 2025 | For educational and security testing purposes only</p>
+            <p><small>Note: This tool only checks HTTP response headers and does not perform full security audits</small></p>
+        </div>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs and content
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+            
+            // Scan button functionality
+            document.getElementById('scan-button').addEventListener('click', async function() {
+                const url = document.getElementById('url-input').value.trim();
+                
+                if (!url) {
+                    alert('Please enter a URL to scan');
+                    return;
+                }
+                
+                // Validate URL format
+                try {
+                    new URL(url);
+                } catch (e) {
+                    alert('Please enter a valid URL (include http:// or https://)');
+                    return;
+                }
+                
+                // Show loading state
+                document.querySelector('.loading').style.display = 'block';
+                document.getElementById('results').style.display = 'none';
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+                
+                try {
+                    // Call backend API
+                    const response = await fetch(`/api/scan?url=${encodeURIComponent(url)}`);
+                    const data = await response.json();
+                    
+                    // Hide loading state
+                    document.querySelector('.loading').style.display = 'none';
+                    document.getElementById('results').style.display = 'block';
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-search"></i> Scan Headers';
+                    
+                    // Display results
+                    displayResults(data);
+                } catch (error) {
+                    document.querySelector('.loading').style.display = 'none';
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-search"></i> Scan Headers';
+                    alert('Error scanning website: ' + error.message);
+                    console.error('Scan error:', error);
+                }
+            });
+            
+            // Copy report functionality
+            document.getElementById('copy-report').addEventListener('click', function() {
+                const reportText = document.getElementById('full-report').textContent;
+                navigator.clipboard.writeText(reportText).then(() => {
+                    this.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="far fa-copy"></i> Copy Report';
+                    }, 2000);
+                });
+            });
+            
+            // Display results function
+            function displayResults(data) {
+                // Update score display
+                const score = data.score || 0;
+                document.getElementById('score-value').textContent = score;
+                document.getElementById('grade').querySelector('span').textContent = data.grade || 'N/A';
+                
+                // Update score circle gradient
+                const scoreCircle = document.getElementById('score-circle');
+                scoreCircle.style.background = `
+                    conic-gradient(
+                        var(--success) 0% ${score}%,
+                        var(--light) ${score}% 100%
+                    )
+                `;
+                
+                // Update progress bar
+                document.querySelector('.progress-fill').style.width = `${score}%`;
+                
+                // Update summary text based on score
+                const summaryText = document.getElementById('summary-text');
+                if (score >= 90) {
+                    summaryText.textContent = 'Excellent security headers configuration!';
+                    summaryText.style.color = 'var(--present)';
+                } else if (score >= 70) {
+                    summaryText.textContent = 'Good security headers configuration with minor improvements needed';
+                    summaryText.style.color = 'var(--info)';
+                } else if (score >= 50) {
+                    summaryText.textContent = 'Average security headers configuration with room for improvement';
+                    summaryText.style.color = 'var(--warning-color)';
+                } else {
+                    summaryText.textContent = 'Poor security headers configuration - significant improvements needed';
+                    summaryText.style.color = 'var(--missing)';
+                }
+                
+                // Populate summary table
+                const summaryTableBody = document.getElementById('summary-table-body');
+                summaryTableBody.innerHTML = '';
+                
+                data.headers.forEach(header => {
+                    const row = document.createElement('tr');
+                    
+                    // Header name
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = header.name;
+                    row.appendChild(nameCell);
+                    
+                    // Status
+                    const statusCell = document.createElement('td');
+                    const statusSpan = document.createElement('span');
+                    statusSpan.className = `status status-${header.status}`;
+                    statusSpan.textContent = header.status === 'present' ? 'PRESENT' : 
+                                            header.status === 'missing' ? 'MISSING' : 'WARNING';
+                    statusCell.appendChild(statusSpan);
+                    row.appendChild(statusCell);
+                    
+                    // Severity
+                    const severityCell = document.createElement('td');
+                    const severitySpan = document.createElement('span');
+                    severitySpan.className = `severity severity-${header.severity}`;
+                    severitySpan.textContent = header.severity.toUpperCase();
+                    severityCell.appendChild(severitySpan);
+                    row.appendChild(severityCell);
+                    
+                    // Value
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = header.value ? truncate(header.value, 50) : 'N/A';
+                    row.appendChild(valueCell);
+                    
+                    summaryTableBody.appendChild(row);
+                });
+                
+                // Populate critical improvements
+                const criticalImprovements = document.getElementById('critical-improvements');
+                criticalImprovements.innerHTML = '';
+                
+                const criticalHeaders = data.headers.filter(h => 
+                    (h.status === 'missing' || h.status === 'warning') && 
+                    (h.severity === 'critical' || h.severity === 'high')
+                );
+                
+                if (criticalHeaders.length === 0) {
+                    criticalImprovements.innerHTML = '<p>No critical improvements needed - good job!</p>';
+                } else {
+                    criticalHeaders.forEach(header => {
+                        const item = document.createElement('div');
+                        item.className = 'missing-header-item';
+                        
+                        const left = document.createElement('div');
+                        left.innerHTML = `
+                            <strong>${header.name}</strong>
+                            <span class="severity severity-${header.severity}" style="margin-left: 8px;">
+                                ${header.severity.toUpperCase()}
+                            </span>
+                        `;
+                        
+                        const right = document.createElement('div');
+                        right.className = 'description';
+                        right.textContent = header.recommendation;
+                        
+                        item.appendChild(left);
+                        item.appendChild(right);
+                        criticalImprovements.appendChild(item);
+                    });
+                }
+                
+                // Populate detailed results
+                const headerResults = document.getElementById('header-results');
+                headerResults.innerHTML = '';
+                
+                data.headers.forEach(header => {
+                    const card = document.createElement('div');
+                    card.className = 'header-card';
+                    
+                    // Header top section
+                    const headerTop = document.createElement('div');
+                    headerTop.className = 'header-top';
+                    
+                    const headerName = document.createElement('div');
+                    headerName.className = 'header-name';
+                    headerName.textContent = header.name;
+                    
+                    const headerMeta = document.createElement('div');
+                    headerMeta.className = 'header-meta';
+                    
+                    const status = document.createElement('span');
+                    status.className = `status status-${header.status}`;
+                    status.innerHTML = `
+                        ${header.status === 'present' ? '<i class="fas fa-check-circle"></i>' : 
+                         header.status === 'missing' ? '<i class="fas fa-times-circle"></i>' : 
+                         '<i class="fas fa-exclamation-triangle"></i>'}
+                        ${header.status === 'present' ? 'PRESENT' : 
+                         header.status === 'missing' ? 'MISSING' : 'WARNING'}
+                    `;
+                    
+                    const severity = document.createElement('span');
+                    severity.className = `severity severity-${header.severity}`;
+                    severity.innerHTML = `
+                        ${header.severity === 'critical' ? '<i class="fas fa-skull"></i>' : 
+                         header.severity === 'high' ? '<i class="fas fa-exclamation-circle"></i>' : 
+                         header.severity === 'medium' ? '<i class="fas fa-shield-alt"></i>' : 
+                         '<i class="fas fa-info-circle"></i>'}
+                        ${header.severity.toUpperCase()}
+                    `;
+                    
+                    headerMeta.appendChild(status);
+                    headerMeta.appendChild(severity);
+                    headerTop.appendChild(headerName);
+                    headerTop.appendChild(headerMeta);
+                    card.appendChild(headerTop);
+                    
+                    // Description
+                    if (header.description) {
+                        const desc = document.createElement('div');
+                        desc.className = 'description';
+                        desc.textContent = header.description;
+                        card.appendChild(desc);
+                    }
+                    
+                    // Current value
+                    if (header.value) {
+                        const value = document.createElement('div');
+                        value.className = 'current-value';
+                        value.innerHTML = `<strong>Current Value:</strong> ${header.value}`;
+                        card.appendChild(value);
+                    }
+                    
+                    // Recommendation
+                    if (header.recommendation) {
+                        const rec = document.createElement('div');
+                        rec.className = 'recommendation';
+                        rec.innerHTML = `<strong>Recommendation:</strong> ${header.recommendation}`;
+                        card.appendChild(rec);
+                    }
+                    
+                    headerResults.appendChild(card);
+                });
+                
+                // Populate missing headers list
+                const missingHeadersList = document.getElementById('missing-headers-list');
+                missingHeadersList.innerHTML = '';
+                
+                const missingHeaders = data.headers.filter(h => h.status === 'missing');
+                
+                if (missingHeaders.length === 0) {
+                    missingHeadersList.innerHTML = `
+                        <div class="header-card" style="text-align: center;">
+                            <h3><i class="fas fa-check-circle" style="color: var(--present);"></i> No Missing Headers</h3>
+                            <p>All recommended security headers are present!</p>
+                        </div>
+                    `;
+                } else {
+                    missingHeaders.forEach(header => {
+                        const card = document.createElement('div');
+                        card.className = 'header-card';
+                        
+                        const headerTop = document.createElement('div');
+                        headerTop.className = 'header-top';
+                        
+                        const headerName = document.createElement('div');
+                        headerName.className = 'header-name';
+                        headerName.textContent = header.name;
+                        
+                        const severity = document.createElement('span');
+                        severity.className = `severity severity-${header.severity}`;
+                        severity.innerHTML = `
+                            ${header.severity === 'critical' ? '<i class="fas fa-skull"></i>' : 
+                             header.severity === 'high' ? '<i class="fas fa-exclamation-circle"></i>' : 
+                             '<i class="fas fa-shield-alt"></i>'}
+                            ${header.severity.toUpperCase()}
+                        `;
+                        
+                        headerTop.appendChild(headerName);
+                        headerTop.appendChild(severity);
+                        card.appendChild(headerTop);
+                        
+                        if (header.description) {
+                            const desc = document.createElement('div');
+                            desc.className = 'description';
+                            desc.textContent = header.description;
+                            card.appendChild(desc);
+                        }
+                        
+                        if (header.recommendation) {
+                            const rec = document.createElement('div');
+                            rec.className = 'recommendation';
+                            rec.innerHTML = `<strong>How to fix:</strong> ${header.recommendation}`;
+                            card.appendChild(rec);
+                        }
+                        
+                        missingHeadersList.appendChild(card);
+                    });
+                }
+                
+                // Populate full report
+                const fullReport = document.getElementById('full-report');
+                fullReport.innerHTML = '';
+                
+                let reportText = `SECURITY HEADER REPORT FOR: ${data.url}\n`;
+                reportText += `Scan Date: ${new Date().toLocaleString()}\n`;
+                reportText += `Security Score: ${data.score}/100 (${data.grade})\n\n`;
+                
+                reportText += "SUMMARY:\n";
+                reportText += "--------\n";
+                data.headers.forEach(header => {
+                    reportText += `${header.name}: ${header.status.toUpperCase()} (${header.severity.toUpperCase()})\n`;
+                });
+                
+                reportText += "\nDETAILED FINDINGS:\n";
+                reportText += "-----------------\n";
+                data.headers.forEach(header => {
+                    reportText += `\n=== ${header.name} ===\n`;
+                    reportText += `Status: ${header.status.toUpperCase()}\n`;
+                    reportText += `Severity: ${header.severity.toUpperCase()}\n`;
+                    if (header.value) {
+                        reportText += `Current Value: ${header.value}\n`;
+                    }
+                    reportText += `Description: ${header.description}\n`;
+                    if (header.recommendation) {
+                        reportText += `Recommendation: ${header.recommendation}\n`;
+                    }
+                });
+                
+                reportText += "\nMISSING HEADERS:\n";
+                reportText += "---------------\n";
+                if (missingHeaders.length === 0) {
+                    reportText += "No missing headers - excellent!\n";
+                } else {
+                    missingHeaders.forEach(header => {
+                        reportText += `\n- ${header.name} (${header.severity.toUpperCase()})\n`;
+                        reportText += `  Recommendation: ${header.recommendation}\n`;
+                    });
+                }
+                
+                reportText += "\nRECOMMENDED ACTIONS:\n";
+                reportText += "-------------------\n";
+                if (data.improvements && data.improvements.length > 0) {
+                    data.improvements.forEach((imp, i) => {
+                        reportText += `${i+1}. ${imp}\n`;
+                    });
+                } else {
+                    reportText += "No critical improvements needed!\n";
+                }
+                
+                fullReport.textContent = reportText;
+            }
+            
+            // Helper function to truncate text
+            function truncate(str, n) {
+                return (str.length > n) ? str.substr(0, n-1) + '...' : str;
+            }
+        });
+    </script>
+</body>
+</html>
