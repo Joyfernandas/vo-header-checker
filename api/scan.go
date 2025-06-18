@@ -1,80 +1,3 @@
-
-package main
-
-import (
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "net/url"
-    "strings"
-    "text/tabwriter"
-)
-
-type HeaderCheckResult struct {
-	Name           string `json:"name"`
-	Status         string `json:"status"`
-	Severity       string `json:"severity"`
-	Description    string `json:"description,omitempty"`
-	Value          string `json:"value,omitempty"`
-	Recommendation string `json:"recommendation,omitempty"`
-}
-
-type ScanResult struct {
-	URL            string              `json:"url"`
-	Score          int                 `json:"score"`
-	Grade          string              `json:"grade"`
-	Headers        []HeaderCheckResult `json:"headers"`
-	MissingHeaders []HeaderCheckResult `json:"missing_headers"`
-	Improvements   []string            `json:"improvements"`
-	SummaryTable   string              `json:"summary_table,omitempty"`
-	DetailedReport string              `json:"detailed_report,omitempty"`
-}
-
-// Vercel-compatible entry point
-func Handler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		enableCORS(w, r)
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	enableCORS(w, r)
-
-	query := r.URL.Query()
-	targetURL := query.Get("url")
-
-	if targetURL == "" {
-		http.Error(w, "URL parameter is required", http.StatusBadRequest)
-		return
-	}
-
-	if !strings.HasPrefix(targetURL, "http://") && !strings.HasPrefix(targetURL, "https://") {
-		targetURL = "https://" + targetURL
-	}
-
-	_, err := url.ParseRequestURI(targetURL)
-	if err != nil {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
-		return
-	}
-
-	result, err := scanHeaders(targetURL)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error scanning URL: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
-}
-
-func enableCORS(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-}
-
-
 package main
 
 import (
@@ -106,7 +29,11 @@ type ScanResult struct {
 	DetailedReport string              `json:"detailed_report,omitempty"`
 }
 
-
+func main() {
+	http.HandleFunc("/scan", corsMiddleware(scanHandler))
+	fmt.Println("Server listening on port 8080...")
+	http.ListenAndServe(":8080", nil)
+}
 
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +55,35 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		next.ServeHTTP(w, r)
 	}
+}
+
+func scanHandler(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	targetURL := query.Get("url")
+
+	if targetURL == "" {
+		http.Error(w, "URL parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	if !strings.HasPrefix(targetURL, "http://") && !strings.HasPrefix(targetURL, "https://") {
+		targetURL = "https://" + targetURL
+	}
+
+	_, err := url.ParseRequestURI(targetURL)
+	if err != nil {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	result, err := scanHeaders(targetURL)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error scanning URL: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func scanHeaders(targetURL string) (*ScanResult, error) {
@@ -191,35 +147,6 @@ func scanHeaders(targetURL string) (*ScanResult, error) {
 	result.DetailedReport = generateDetailedReport(results)
 
 	return result, nil
-}
-
-func scanHandler(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	targetURL := query.Get("url")
-
-	if targetURL == "" {
-		http.Error(w, "URL parameter is required", http.StatusBadRequest)
-		return
-	}
-
-	if !strings.HasPrefix(targetURL, "http://") && !strings.HasPrefix(targetURL, "https://") {
-		targetURL = "https://" + targetURL
-	}
-
-	_, err := url.ParseRequestURI(targetURL)
-	if err != nil {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
-		return
-	}
-
-	result, err := scanHeaders(targetURL)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error scanning URL: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
 }
 
 func calculateScore(headers []HeaderCheckResult) (int, string) {
